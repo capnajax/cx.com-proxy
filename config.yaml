@@ -1,0 +1,20 @@
+default:
+  backend:
+    baseUrl: http://localhost:8080
+
+  caches:
+  - name: content
+    pattern: '/content'
+  - name: app
+    pattern: '.*'
+
+  debug:
+    logging:
+      level: trace
+      showSensitive: true
+
+environment:
+- name: moon
+  configs:
+    backend:
+      baseUrl: http://capnajax.moon

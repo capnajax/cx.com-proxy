@@ -1,0 +1,30 @@
+{
+  "name": "cx.com-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/http-server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capnajax/cx.com-proxy.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/capnajax/cx.com-proxy/issues"
+  },
+  "homepage": "https://github.com/capnajax/cx.com-proxy#readme",
+  "dependencies": {
+    "args-and-envs": "^0.4.2",
+    "axios": "^0.25.0",
+    "capn-log": "^0.9.0",
+    "express": "^4.17.2",
+    "lodash": "^4.17.21",
+    "morgan": "^1.10.0",
+    "per-env-config": "^0.1.4",
+    "yaml": "^1.10.2"
+  }
+}
