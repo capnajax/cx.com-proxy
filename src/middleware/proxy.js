@@ -38,9 +38,12 @@ function httpsOptions(opts) {
     );
 }
 function request(opts) {
-  return client.request(
-    httpsOptions(opts)
-  );
+  const log = logger.getLogger(MODULE, request);
+  let requestOpts =  httpsOptions(opts);
+  log.trace('requestOpts: %s', requestOpts);
+  log.trace('requestOpts.agent: %s', requestOpts.agent);
+  log.trace('c(\'backend.baseUrl\'): %s', c('backend.baseUrl'));
+  return client.request( requestOpts );
 }
 
 /**
@@ -74,7 +77,7 @@ function proxy(req, res, next) {
   const log = logger.getLogger(MODULE, proxy);
 
   let verb = req.method;
-  let path = req.path;
+  let path =req.originalUrl;
   let ims = req.get('If-Modified-Since') || null;
 
   log.debug('proxying %s %s', verb, path);
@@ -100,6 +103,8 @@ function proxy(req, res, next) {
       url: path
     })
     .then(clientResponse => {
+
+      log.trace(' --> clientResponse: %s', clientResponse);
 
       let requestedDocument = new Document(
         clientResponse.status,
@@ -132,6 +137,10 @@ function proxy(req, res, next) {
 
       log.debug(' --> done');
 
+    })
+    .catch(reason => {
+      log.error(' --> FAILED: %s', reason);
+      next();
     });
 
   } else {

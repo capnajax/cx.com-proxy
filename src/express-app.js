@@ -11,7 +11,7 @@ const app = express();
 
 app.use(morganLogger('dev'));
 
-app.use('^/([^_].*)?', proxy);
+app.use(new RegExp('^/([^_].*)?'), proxy);
 //app.use('_cache');
 
 app.use((req, res, next) => {
