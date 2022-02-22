@@ -5,6 +5,7 @@
   "main": "src/http-server.js",
   "type": "module",
   "scripts": {
+    "start": "node ./index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,10 +22,12 @@
     "args-and-envs": "^0.4.2",
     "axios": "^0.25.0",
     "capn-log": "^0.9.0",
+    "crypto-random-string": "^4.0.0",
     "express": "^4.17.2",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "per-env-config": "^0.1.4",
+    "ws": "^8.5.0",
     "yaml": "^1.10.2"
   }
 }

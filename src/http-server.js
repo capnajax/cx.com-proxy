@@ -2,8 +2,11 @@
 
 import argv from './args.js';
 import app from './express-app.js';
-import { createServer } from 'https';
+import { promises as fs } from 'fs';
+import http from 'http';
+import https from 'https';
 import logger from 'capn-log';
+import { setup as socketSetup } from './socket/server.js';
 
 const MODULE = 'proxy/http-server';
 
@@ -15,6 +18,24 @@ async function startup() {
   let server;
 
   let port = global.argv.port;
+
+  let createServer = http.createServer;
+  let serverArgs = {};
+
+  // get certificates
+  for (let pem of [
+    ['caCertFile', 'ca'],
+    ['sslCertFile', 'cert'],
+    ['sslKeyFile', 'key']]) {
+
+    if (argv[pem[0]]) {
+      createServer = https.createServer;
+      beforeReadyPromises.push(
+        fs.readFile(argv[pem[0]])
+          .then(buf => { serverArgs[pem[1]] = buf.toString();})
+      );
+    }      
+  }
 
   function onError(error) {
     if (error.syscall !== 'listen') {
@@ -47,14 +68,11 @@ async function startup() {
       // startup HTTP service
       app.set('port', argv.port);
 
-      log.trace('app: %s', app);
-
-      // server = createServer(app);
-      app.listen(port);
-      // server.on('error', onError);
-      // server.on('listening', onListening);    
-      app.on('error', onError);
-      app.on('listening', onListening);    
+      server = createServer(serverArgs, app);
+      server.listen(port);
+      socketSetup(server);
+      server.on('error', onError);
+      server.on('listening', onListening);    
     });
 }
 

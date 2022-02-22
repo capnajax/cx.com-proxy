@@ -25,7 +25,9 @@ const passThroughHeaders = {
 const defaultBackendRequestOptions = {};
 
 let caches = c('caches').map(cache => new Cache(cache.name, cache.pattern));
-let backendAgent = new https.Agent({});
+
+// TODO replace with configurable certificates
+let backendAgent = new https.Agent({rejectUnauthorized: false});
 
 const client = axios.create({
   baseURL: c('backend.baseUrl')
@@ -41,7 +43,6 @@ function request(opts) {
   const log = logger.getLogger(MODULE, request);
   let requestOpts =  httpsOptions(opts);
   log.trace('requestOpts: %s', requestOpts);
-  log.trace('requestOpts.agent: %s', requestOpts.agent);
   log.trace('c(\'backend.baseUrl\'): %s', c('backend.baseUrl'));
   return client.request( requestOpts );
 }
@@ -151,5 +152,7 @@ function proxy(req, res, next) {
 
   }
 }
+
+proxy.caches = caches;
 
 export default proxy;

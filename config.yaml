@@ -13,8 +13,15 @@ default:
       level: trace
       showSensitive: true
 
+  socket:
+    ping:
+      interval: 10000
+      timeout: 1000
+
 environment:
 - name: moon
   config:
     backend:
       baseUrl: https://capnajax.moon
+    security:
+      insecure: false

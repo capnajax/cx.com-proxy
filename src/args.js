@@ -14,6 +14,12 @@ function doParse() {
   let log = logger.getLogger(MODULE, 'doParse');
 
   const argvDefinitions = [
+    { name: 'caCertFile',
+      arg: ['--caCert'],
+      env: 'CA_CERT',
+      required: false,
+      type: 'string'
+    },
     { name: 'configEnv',
       arg: ['--env'],
       env: 'CONFIG_ENV',
@@ -25,11 +31,29 @@ function doParse() {
       required: true,
       type: 'list'      
     },
+    { name: 'frontSide',
+      arg: [ '--frontSide' ],
+      env: 'FRONT_SIDE',
+      required: false,
+      type: 'string',
+    },
     { name: 'port',
       arg: [ '--port', '-p' ],
       env: 'PORT',
       type: 'integer',
       default: 3000
+    },
+    { name: 'sslCertFile',
+      arg: ['--sslCert'],
+      env: 'SSL_CERT',
+      required: false,
+      type: 'string'
+    },
+    { name: 'sslKeyFile',
+      arg: ['--sslKey'],
+      env: 'SSL_KEY',
+      required: false,
+      type: 'string'
     }];
 
   const handlers = {
@@ -82,6 +106,8 @@ function doParse() {
   return parser;
 }
 let parser = doParse();
+
+parser.argv.isClient = !! parser.argv.frontSide;
 
 export { parser };
 export default parser.argv;
