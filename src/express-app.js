@@ -12,10 +12,13 @@ const app = express();
 
 app.use(morganLogger('dev'));
 
+app.use('/', proxy);
 app.use(new RegExp('^/([^_].*)?'), proxy);
 app.use('_content', receiver);
 
 app.use((req, res, next) => {
+  const log = logger.getLogger(MODULE, '404');
+  log.info('No pattern for %s %s', req.method, req.path);
   res.status(404).send(`No pattern for ${req.method} ${req.path}`);
 });
 

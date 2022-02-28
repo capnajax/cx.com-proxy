@@ -55,8 +55,6 @@ function setup(server) {
         }
       }
     });
-
-    existingConnections.push(ws);
   });
 }
 
