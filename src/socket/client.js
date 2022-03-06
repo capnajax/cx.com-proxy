@@ -50,6 +50,9 @@ function httpGet(dataObj) {
   const log = logger.getLogger(MODULE, httpGet);
   log.trace('%s', dataObj);
 
+  const url = global.config('backend.baseUrl') + dataObj.path;
+  log.info('GET %s', url);
+
   for (let i of ['path', 'requestId']) {
     if (!_.has(dataObj, i)) {
       throw `\`get\` dataObj missing required value for "${i}"`;
@@ -57,7 +60,7 @@ function httpGet(dataObj) {
   }
 
   // make HTTP client request
-  axios.get(global.config('backend.baseUrl') + '/' + dataObj.path)
+  axios.get(url)
     .then(response => {
 
       // post result to server
@@ -76,6 +79,9 @@ function httpGet(dataObj) {
         data: response.data,
         url: `https://${argv.frontSide}/_content`
       };
+
+      log.trace('Got response, POSTing %s', postOptions);
+
       axios(postOptions)
         .then(response => {
           if (response.status >= 400) {

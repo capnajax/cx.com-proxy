@@ -22,6 +22,6 @@ environment:
 - name: moon
   config:
     backend:
-      baseUrl: http://capnajax-www
+      baseUrl: http://capnajax-www:8080
     security:
       insecure: false
