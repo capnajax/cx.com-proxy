@@ -48,6 +48,7 @@ function proxyClientOpts(opts) {
 
 function httpGet(dataObj) {
   const log = logger.getLogger(MODULE, httpGet);
+  log.trace('%s', dataObj);
 
   for (let i of ['path', 'requestId']) {
     if (!_.has(dataObj, i)) {
@@ -85,18 +86,20 @@ function httpGet(dataObj) {
     });
 }
 
+let pingTimeout;
+
 function heartbeat() {
   const log = logger.getLogger(MODULE, heartbeat);
   const self = this;
   log.trace('heartbeat');
 
-  clearTimeout(self.pingTimeout);
+  pingTimeout && clearTimeout(pingTimeout);
 
   // Use `WebSocket#terminate()`, which immediately destroys the connection,
   // instead of `WebSocket#close()`, which waits for the close timer.
   // Delay should be equal to the interval at which your server
   // sends out pings plus a conservative assumption of the latency.
-  self.pingTimeout = setTimeout(() => {
+  pingTimeout = setTimeout(() => {
     // start a new socket    
     log.error('Ping timeout. Recreating socket');
     openWs()
@@ -123,14 +126,14 @@ async function openWs() {
 
   log.debug('created WebSocket');
 
-
   ws.on('message', function message(data, isBinary) {
     log.debug('message received');
 
     if (!isBinary) {
+      log.trace('ascii data: %s', data);
       try {
         let dataObj = JSON.parse(data);
-        switch(dataObj.command) {
+        switch(dataObj.command || dataObj.method) {
         case 'get':
 
           httpGet(dataObj);
@@ -157,7 +160,11 @@ async function openWs() {
 
   });
 
-  ws.on('open', heartbeat);
+  ws.on('open', function() {
+    heartbeat();
+    log.debug('Sending client Id %s', clientId);
+    ws.send(JSON.stringify({type: 'clientId', clientId}));
+  });
   ws.on('ping', heartbeat);
   ws.on('close', function clear() {
     clearTimeout(this.pingTimeout);

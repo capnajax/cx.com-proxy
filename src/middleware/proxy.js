@@ -1,12 +1,11 @@
 'use strict';
 
-import axios from 'axios';
 import {
   Cache, Document,
   cached, notCached, wontCache
 } from './cache.js';
-import https from 'https';
 import logger from 'capn-log';
+import { requestDocument } from '../socket/server.js';
 import _ from 'lodash';
 
 const MODULE = 'proxy/proxy';
@@ -22,29 +21,21 @@ const passThroughHeaders = {
   ]
 }
 
-const defaultBackendRequestOptions = {};
-
 let caches = c('caches').map(cache => new Cache(cache.name, cache.pattern));
 
-// TODO replace with configurable certificates
-let backendAgent = new https.Agent({rejectUnauthorized: false});
-
-const client = axios.create({
-  baseURL: c('backend.baseUrl')
-});
-
-function httpsOptions(opts) {
-  return _.defaults(opts,
-      { httpsAgent: backendAgent },
-      defaultBackendRequestOptions
-    );
-}
-function request(opts) {
+function request({method, path}) {
   const log = logger.getLogger(MODULE, request);
-  let requestOpts =  httpsOptions(opts);
-  log.trace('requestOpts: %s', requestOpts);
-  log.trace('c(\'backend.baseUrl\'): %s', c('backend.baseUrl'));
-  return client.request( requestOpts );
+  log.trace('Making request to "%s"', {method, path});
+
+  let docPromise = requestDocument({method, path});
+
+
+
+
+  // TODO
+
+
+
 }
 
 /**
@@ -101,7 +92,7 @@ function proxy(req, res, next) {
     // make request
     request({
       method: verb.toLowerCase(),
-      url: path
+      path
     })
     .then(clientResponse => {
 

@@ -1,7 +1,7 @@
 'use strict';
 
 import logger from 'capn-log';
-import { requestDocument, requestsOutstanding } from '../socket/server.js';
+import { requestsOutstanding } from '../socket/server.js';
 import { Router } from "express";
 import _ from 'lodash';
 

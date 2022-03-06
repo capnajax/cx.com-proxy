@@ -2,7 +2,6 @@
 
 import logger from 'capn-log';
 import cryptoRandomString from 'crypto-random-string';
-import e from 'express';
 import { WebSocketServer } from 'ws';
 
 const MODULE = 'proxy/server';
@@ -34,6 +33,7 @@ function setup(server) {
     ws.on('pong', heartbeat);
     ws.on('message', function message(data, isBinary) {
       log.debug('got message');
+      log.debug('data: %s', data);
       
       if (!isBinary) {
 
@@ -47,9 +47,11 @@ function setup(server) {
 
           } else {
             if (activeClientId !== message.clientId) {
+              log.debug('setting new client id %s', message.clientId);
               deadClientIds.add(activeClientId);
               activeClientId = message.clientId;
             }
+            log.debug('setting active client');
             activeClient = this;
           }
         }
@@ -68,24 +70,30 @@ const interval = setInterval(function ping() {
   }
 }, global.config('socket.ping.interval'));
 
-function requestDocument(path) {
+function requestDocument({method, path}) {
+  const log = logger.getLogger(MODULE, requestDocument);  
   return new Promise((resolve, reject) => {
     if (activeClient) {
       let requestId = cryptoRandomString({length: 32, type: 'alphanumeric'});
-      activeClient.message(JSON.stringify({path, requestId}), false);
-
+      let message = JSON.stringify({method, path, requestId});
+      log.trace('sending message %s', message);
+      activeClient.send(message);
+      log.trace('setting timeout')
       let timeout = setTimeout(() => {
         rejected = true;
         reject('timeout');
       }, 1000);
       let rejected = false;
+      log.trace('setting requestsOutstanding[%s]', requestId);
       requestsOutstanding[requestId] = function(headers, doc) {
+        log.trace('requestsOutstanding[%s] called, %s', requestId, {headers, doc});
         if (!rejected) {
           cancelTimout(timeout);
           resolve({headers, doc});
         }
       }
     } else {
+      log.warn('no active client');
       // no activeClient
       reject('no_client');
     }
