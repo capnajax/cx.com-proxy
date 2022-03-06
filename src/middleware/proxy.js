@@ -36,6 +36,8 @@ function request({method, path}) {
 
 
 
+  return docPromise;
+
 }
 
 /**

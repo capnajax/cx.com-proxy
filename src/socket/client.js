@@ -3,6 +3,7 @@
 import argv from '../args.js';
 import axios from 'axios';
 import cryptoRandomString from 'crypto-random-string';
+import https from 'https';
 import { promises as fs, readFileSync } from 'fs';
 import logger from 'capn-log';
 import { WebSocket } from 'ws';
@@ -25,6 +26,16 @@ let sslKey = _.has(global.argv, 'sslKeyFile')
   ? readFileSync(global.argv.sslKeyFile).toString()
   : undefined;
 
+let axiosUplinkInst = undefined;
+function axiosUplink() {
+  if (!axiosUplinkInst) {
+    axiosUplinkInst = axios.create({
+      httpsAgent: new https.Agent(proxyClientOpts({}))
+    });
+  }
+  return axiosUplinkInst;
+}
+  
 /**
  * @function proxyClientOpts
  * Create options to use for connecting to the proxy server
@@ -82,13 +93,15 @@ function httpGet(dataObj) {
 
       log.trace('Got response, POSTing %s', postOptions);
 
-      axios(postOptions)
+      axiosUplink()(postOptions)
         .then(response => {
+          log.trace('POSTed. Status %s', response.status);
           if (response.status >= 400) {
             console.error('Got error %s responding to GET (%s) %s',
               response.status, dataObj.requestId, dataObj.path);
           }
         });
+
     });
 }
 
