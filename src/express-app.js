@@ -12,9 +12,8 @@ const app = express();
 
 app.use(morganLogger('dev'));
 
-app.use('/', proxy);
-app.use(new RegExp('^/([^_].*)?'), proxy);
-app.use('_content', receiver);
+app.use('/_content', receiver);
+app.use(new RegExp('^/([^_].*)?$'), proxy);
 
 app.use((req, res, next) => {
   const log = logger.getLogger(MODULE, '404');
