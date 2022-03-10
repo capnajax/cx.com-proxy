@@ -4,12 +4,14 @@ import morganLogger from 'morgan';
 import proxy from './middleware/proxy.js';
 import receiver from './middleware/receiver.js';
 import logger from 'capn-log';
+import bodyParser from 'body-parser';
 
 const MODULE='proxy/express-app';
 const log = logger.getLogger(MODULE, '*');
 
 const app = express();
 
+app.use(bodyParser.raw());
 app.use(morganLogger('dev'));
 
 app.use('/_content', receiver);

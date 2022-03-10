@@ -27,6 +27,11 @@ let sslKey = _.has(global.argv, 'sslKeyFile')
   : undefined;
 
 let axiosUplinkInst = undefined;
+/**
+ * @function axiosUplink 
+ * Return an instance of axios to use to upload data
+ * @return {axios.AxiosInstance}
+ */
 function axiosUplink() {
   if (!axiosUplinkInst) {
     axiosUplinkInst = axios.create({
@@ -51,7 +56,8 @@ function proxyClientOpts(opts) {
     ca: caCert,
     cert: sslCert,
     key: sslKey,
-    rejectUnauthorized: !insecure
+    rejectUnauthorized: !insecure,
+    timeout: 1000
   }, opts);
 
   return result;
@@ -74,34 +80,48 @@ function httpGet(dataObj) {
   axios.get(url)
     .then(response => {
 
+      log.trace('response: %s', response);
+      log.trace('response.headers: %s', response.headers);
+
+      let dataBuffer = Buffer.from(response.data);
       // post result to server
       let forwardHeaders = {
         'x-capnajax-status': response.status,
         'x-capnajax-statusText': response.statusText,
-        'content-type': response.headers['content-type'],
-        'content-length': response.headers['content-length'],
+        'x-capnajax-content-type': response.headers['content-type'],
+        'content-type': 'application/octet-stream',
+        'content-length': dataBuffer.length,
         'x-capnajax-request-id': dataObj.requestId,
         'x-capnajax-path': dataObj.path
       };
 
-      let postOptions = {
+      log.trace('forwardHeaders: %s', forwardHeaders);
+
+      let putOptions = proxyClientOpts({
         method: 'PUT',
         headers: forwardHeaders,
-        data: response.data,
         url: `https://${argv.frontSide}/_content`
-      };
+      });
 
-      log.trace('Got response, POSTing %s', postOptions);
+      let uplink = axiosUplink();
 
-      axiosUplink()(postOptions)
+      log.trace('Got response, POSTing %s', putOptions);
+      log.trace(' --> headers %s', putOptions.headers);
+      log.trace(' --> data %s', dataBuffer.toString());
+      putOptions.data = dataBuffer;
+
+      uplink(putOptions)
         .then(response => {
-          log.trace('POSTed. Status %s', response.status);
+          log.trace('POSTed.');
+          log.trace('Status %s', response.status);
           if (response.status >= 400) {
             console.error('Got error %s responding to GET (%s) %s',
               response.status, dataObj.requestId, dataObj.path);
           }
+        })
+        .catch(e => {
+          log.error('failed upload response: %s', e);
         });
-
     });
 }
 

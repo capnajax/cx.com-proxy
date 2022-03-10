@@ -99,11 +99,18 @@ function proxy(req, res, next) {
     .then(clientResponse => {
 
       log.trace(' --> clientResponse: %s', clientResponse);
+      log.trace(' --> clientResponse.headers: %s', clientResponse.headers);
+
+      let docHeaders = { ... clientResponse.headers };
+
+      docHeaders['content-type'] =
+        clientResponse.headers['x-capnajax-content-type'];
+      delete clientResponse.headers['x-capnajax-content-type'];
 
       let requestedDocument = new Document(
-        clientResponse.status,
-        clientResponse.headers,
-        clientResponse.data
+        clientResponse.headers['x-capnajax-status'],
+        docHeaders,
+        clientResponse.doc
       );
 
       log.trace(' --> requestedDocument: %s', requestedDocument);

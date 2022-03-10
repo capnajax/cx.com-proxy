@@ -88,7 +88,9 @@ function requestDocument({method, path}) {
       requestsOutstanding[requestId] = function(headers, doc) {
         log.trace('requestsOutstanding[%s] called, %s', requestId, {headers, doc});
         if (!rejected) {
-          cancelTimout(timeout);
+          clearTimeout(timeout);
+          log.trace('resolving with headers, doc = %s:', 
+            JSON.stringify({headers, doc: doc.toString()}));
           resolve({headers, doc});
         }
       }
