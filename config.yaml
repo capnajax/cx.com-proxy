@@ -1,6 +1,7 @@
 default:
   backend:
-    baseUrl: http://localhost:8080
+    host: localhost
+    port: 8080
 
   caches:
   - name: content
@@ -10,8 +11,19 @@ default:
 
   debug:
     logging:
-      level: trace
-      showSensitive: true
+      level: info
+      showSensitive: false
+      modules:
+      - name: proxy/ws-client
+        level: trace
+        methods:
+        - name: clientPostProxy
+          level: trace
+        - name: uplinkClientOpts
+          level: trace
+
+  proxy:
+    forwardHeaders: []
 
   socket:
     ping:
@@ -22,6 +34,7 @@ environment:
 - name: moon
   config:
     backend:
-      baseUrl: http://capnajax-www:8080
+      host: capnajax-www
+      port: 8080
     security:
       insecure: false

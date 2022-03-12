@@ -11,7 +11,7 @@ const log = logger.getLogger(MODULE, '*');
 
 const app = express();
 
-app.use(bodyParser.raw());
+app.use(bodyParser.raw({limit: '10mb'}));
 app.use(morganLogger('dev'));
 
 app.use('/_content', receiver);
