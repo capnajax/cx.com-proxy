@@ -17,23 +17,39 @@ const passThroughHeaders = [
 
 router.put('/', (req, res) => {
   const log = logger.getLogger(MODULE, 'PUT', '/');
-  const body = req.body;
-  let requestId = req.get('x-capnajax-request-id');
-  log.debug('called. RequestId: "%s"', requestId);
-  let headers = {};
-  for (let h of passThroughHeaders) {
-    headers[h] = req.get(h);
-  }
 
-  log.trace('req %s', req);
-  log.trace('headers: %s', headers);
-  log.trace('body: %s', body);
+  let chunks = [];
 
-  if (_.has(requestsOutstanding, requestId)) {
-    requestsOutstanding[requestId](headers, body);
-  }
+  // pull data by hand so expressjs doesn't try to parse it.
+  req.on('data', chunk => {
+    log.trace('GOT CHUNK: %s', chunk);
+    chunks.push(chunk);
+  });
 
-  res.sendStatus(204);
+  req.on('end', () => {
+    const body = chunks.join('');
+
+    let requestId = req.get('x-capnajax-request-id');
+    log.debug('called. RequestId: "%s"', requestId);
+    let headers = {};
+    for (let h of passThroughHeaders) {
+      if (req.get(h)) {
+        headers[h] = req.get(h);
+      }
+    }
+  
+    log.trace('req %s', req);
+    log.trace('headers: %s', headers);
+    log.trace('body: %s', body);
+  
+    if (_.has(requestsOutstanding, requestId)) {
+      requestsOutstanding[requestId](headers, body);
+    }
+  
+    res.sendStatus(204);
+  
+  });
+
 });
 
 export default router;

@@ -1,7 +1,6 @@
 'use strict';
 
 import argv from '../args.js';
-import axios from 'axios';
 import cryptoRandomString from 'crypto-random-string';
 import http from 'http';
 import https from 'https';
@@ -71,7 +70,7 @@ function uplinkClientOpts(opts) {
 }
 
 /**
- * @function clientPostProxy
+ * @function clientPutProxy
  * Make a request to the back-end and send the results in a post to the front
  * end.
  * @param {String} method the http method to use to request from the back end
@@ -85,8 +84,8 @@ function uplinkClientOpts(opts) {
  * 'application/x-www-form-urlencoded'
  * @param {Buffer} [backendOptions.body] the requst body.
  */
-function clientPostProxy(method, path, frontendOptions, backendOptions) {
-  const log = logger.getLogger(MODULE, clientPostProxy);
+function clientPutProxy(method, path, frontendOptions, backendOptions) {
+  const log = logger.getLogger(MODULE, clientPutProxy);
   log.debug('Making backend %s request to %s', method.toUpperCase(), path);
 
   backendOptions || (backendOptions = {});
@@ -109,6 +108,8 @@ function clientPostProxy(method, path, frontendOptions, backendOptions) {
     for (let i = 0; i < message.rawHeaders.length; i += 2) {
       let key = message.rawHeaders[i].toLowerCase();
       let value = message.rawHeaders[i+1];
+
+      log.trace(' --> --> header() %s: %s', forwardableHeaders.includes(key) ? 'included' : 'not included', key, value);
 
       if (forwardableHeaders.includes(key)) {
         headers[key] = value;
@@ -138,19 +139,35 @@ function clientPostProxy(method, path, frontendOptions, backendOptions) {
       path: '/_content'
     });
     log.trace('uplinkOpts: %s', uplinkOpts);
+    log.trace('uplinkOpts.headers: %s', uplinkOpts.headers);
 
     // uplink with headers
     let uplink = https.request(uplinkOpts);
+    // stores chunks until ready to send them.
+    let chunks = [];
+
+    let writeUplink = (chunk) => {
+      if (chunk) {
+        log.debug(' --> %s %s queueing chunk', method.toUpperCase(), path);
+        chunks && chunks.push(chunk);
+      }
+      if (uplink && chunks) {
+        while(chunks.length) {
+          log.debug(' --> %s %s writing chunk', method.toUpperCase(), path);
+          let writeChunk = chunks.shift();
+          log.trace('Chunk: %s', writeChunk);
+          uplink.write(writeChunk);
+        }
+      }
+    }
 
     message.on('data', chunk => {
-      log.debug(' --> %s %s uplink sending data', method.toUpperCase(), path);
-      log.trace(' --> %s %s uplink data chunk: %s',
-        method.toUpperCase(), path, chunk);
-      uplink && uplink.write(chunk);
+      writeUplink(chunk);
     });
 
     message.on('end', () => {
       log.debug(' --> %s %s client response end', method.toUpperCase(), path);
+      writeUplink();
       uplink && uplink.end();
       log.debug(' --> %s %s uplink complete', method.toUpperCase(), path);
       uplink = null;
@@ -159,13 +176,15 @@ function clientPostProxy(method, path, frontendOptions, backendOptions) {
     message.on('error', () => {
       log.debug(' --> %s %s ERROR', method.toUpperCase(), path);
       uplink && uplink.destroy();
+      uplink = null;
     });
 
     uplink.on('response', uplinkMessage => {
       log.debug(' --> %s %s uplink response status %s %s',
         method.toUpperCase(), path,
         uplinkMessage.statusCode, uplinkMessage.statusMessage);
-      });
+        writeUplink();
+    });
 
     uplink.on('end', () => {
       if (!res.complete) {
@@ -193,7 +212,7 @@ function httpGet(dataObj) {
   const url = dataObj.path;
   log.info('GET %s', url);
 
-  clientPostProxy(
+  clientPutProxy(
     'GET',
     dataObj.path,
     { requestId: dataObj.requestId }

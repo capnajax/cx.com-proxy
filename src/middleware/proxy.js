@@ -55,7 +55,7 @@ function sendDocument(res, document) {
   const log = logger.getLogger(MODULE, sendDocument);
 
   log.trace('sendDocument called on document %s', document);
-  log.trace('filteredHeders: %s', document.headers);
+  log.trace('filteredHeaders: %s', document.headers);
 
   // return result
   for (let h of Object.keys(document.headers)) {
@@ -103,10 +103,6 @@ function proxy(req, res, next) {
 
       let docHeaders = { ... clientResponse.headers };
 
-      docHeaders['content-type'] =
-        clientResponse.headers['x-capnajax-content-type'];
-      delete clientResponse.headers['x-capnajax-content-type'];
-
       let requestedDocument = new Document(
         clientResponse.headers['x-capnajax-status'],
         docHeaders,
@@ -114,10 +110,11 @@ function proxy(req, res, next) {
       );
 
       log.trace(' --> requestedDocument: %s', requestedDocument);
+      log.trace(' --> requestedDocument.statusCode: %s', requestedDocument.statusCode);
 
       requestedDocument.filterHeaders(
-        _.has(passThroughHeaders, requestedDocument.status)
-        ? _.get(passThroughHeaders, requestedDocument.status)
+        _.has(passThroughHeaders, requestedDocument.statusCode)
+        ? _.get(passThroughHeaders, requestedDocument.statusCode)
         : passThroughHeaders.default
       );
 

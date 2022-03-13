@@ -13,17 +13,11 @@ default:
     logging:
       level: info
       showSensitive: false
-      modules:
-      - name: proxy/ws-client
-        level: trace
-        methods:
-        - name: clientPostProxy
-          level: trace
-        - name: uplinkClientOpts
-          level: trace
 
   proxy:
-    forwardHeaders: []
+    forwardHeaders:
+    - content-type
+    - content-length
 
   socket:
     ping:
