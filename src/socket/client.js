@@ -35,6 +35,9 @@ function backendClientOpts(opts) {
   const log = logger.getLogger(MODULE, 'backendClientOpts');
 
   let result = _.extend({
+    ca: caCert,
+    cert: sslCert,
+    key: sslKey,
     host: c('backend.host'),
     port: c('backend.port'),
     timeout: 1000
@@ -95,10 +98,38 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
     })
   );
 
-  log.trace('clientOptions:', clientOptions);
+  log.debug(' --> %s %s setting up uplink', method.toUpperCase(), path);
+
+  const uplinkOpts = uplinkClientOpts({
+    method: 'PUT',
+    hostname: argv.frontSide,
+    path: '/_content'
+  });
+
+  // uplink with headers
+  let uplink = null;
+  // stores chunks until ready to send them.
+  let chunks = [];
+
+  let writeUplink = (chunk) => {
+    if (chunk) {
+      log.debug(' --> %s %s queueing chunk', method.toUpperCase(), path);
+      chunks && chunks.push(chunk);
+    }
+    if (uplink && chunks) {
+      while(chunks.length) {
+        log.debug(' --> %s %s writing chunk', method.toUpperCase(), path);
+        let writeChunk = chunks.shift();
+        log.trace('Chunk: %s', writeChunk);
+        uplink.write(writeChunk);
+      }
+    }
+  }
 
   const backendRequest = http.request(clientOptions);
-  backendRequest.setNoDelay(true);
+  log.debug(' --> %s %s made backend request', method.toUpperCase(), path);
+  //backendRequest.setNoDelay(true);
+  //log.debug(' --> %s %s set nodelay', method.toUpperCase(), path);
 
   backendRequest.on('response', message => {
     log.debug(' --> %s %s got response', method.toUpperCase(), path);
@@ -130,80 +161,34 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
       'x-capnajax-path': path        
     });
 
-    log.debug(' --> %s %s setting up uplink', method.toUpperCase(), path);
-
-    const uplinkOpts = uplinkClientOpts({
-      method: 'PUT',
-      headers,
-      hostname: argv.frontSide,
-      path: '/_content'
-    });
-    log.trace('uplinkOpts: %s', uplinkOpts);
+    uplinkOpts.headers = headers;
     log.trace('uplinkOpts.headers: %s', uplinkOpts.headers);
+    uplink = https.request(uplinkOpts);
 
-    // uplink with headers
-    let uplink = https.request(uplinkOpts);
-    // stores chunks until ready to send them.
-    let chunks = [];
-
-    let writeUplink = (chunk) => {
-      if (chunk) {
-        log.debug(' --> %s %s queueing chunk', method.toUpperCase(), path);
-        chunks && chunks.push(chunk);
-      }
-      if (uplink && chunks) {
-        while(chunks.length) {
-          log.debug(' --> %s %s writing chunk', method.toUpperCase(), path);
-          let writeChunk = chunks.shift();
-          log.trace('Chunk: %s', writeChunk);
-          uplink.write(writeChunk);
-        }
-      }
-    }
-
-    message.on('data', chunk => {
-      writeUplink(chunk);
-    });
-
-    message.on('end', () => {
-      log.debug(' --> %s %s client response end', method.toUpperCase(), path);
-      writeUplink();
-      uplink && uplink.end();
-      log.debug(' --> %s %s uplink complete', method.toUpperCase(), path);
-      uplink = null;
-    });
-
-    message.on('error', () => {
-      log.debug(' --> %s %s ERROR', method.toUpperCase(), path);
-      uplink && uplink.destroy();
-      uplink = null;
-    });
-
-    uplink.on('response', uplinkMessage => {
-      log.debug(' --> %s %s uplink response status %s %s',
-        method.toUpperCase(), path,
-        uplinkMessage.statusCode, uplinkMessage.statusMessage);
-        writeUplink();
-    });
-
-    uplink.on('end', () => {
-      if (!res.complete) {
-        log.error(' --> %s %s uplink connection terminated prematurely',
-          method.toUpperCase(), path);
-      } else {
-        log.debug(' --> %s %s uplink response complete',
-          method.toUpperCase(), path);
-      }
-    });
   });
 
-  if (backendOptions.body) {
-    backendRequest.end(backendOptions.body);
-  } else {
-    backendRequest.end();
-  }
-}
+  backendRequest.on('data', chunk => {
+    writeUplink(chunk);
+  });
 
+  backendRequest.on('end', () => {
+    log.debug(' --> %s %s client response end', method.toUpperCase(), path);
+    writeUplink();
+    uplink && uplink.end();
+    log.debug(' --> %s %s uplink complete', method.toUpperCase(), path);
+    uplink = null;
+  });
+
+  backendRequest.on('error', reason => {
+    log.debug(' --> %s %s ERROR: %s', method.toUpperCase(), path, reason);
+    uplink && uplink.destroy();
+    uplink = null;
+  });
+
+  backendRequest.end(() => {
+    log.debug(' --> %s %s end', method.toUpperCase(), path);
+  });
+}
 
 function httpGet(dataObj) {
   const log = logger.getLogger(MODULE, httpGet);

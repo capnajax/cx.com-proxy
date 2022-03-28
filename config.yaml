@@ -13,11 +13,19 @@ default:
     logging:
       level: info
       showSensitive: false
-
+      modules:
+      - name: proxy/ws-client
+        level: trace
+        methods:
+        # - name: backendClientOpts
+        #   level: info
+        - name: uplinkClientOpts
+          level: info
   proxy:
     forwardHeaders:
     - content-type
     - content-length
+    - location
 
   socket:
     ping:
@@ -28,7 +36,15 @@ environment:
 - name: moon
   config:
     backend:
-      host: capnajax-www
-      port: 8080
+      host: dev-direct.capnajax.moon
+      port: 443
+    security:
+      insecure: false
+
+- name: prod
+  config:
+    backend:
+      host: prod-direct.capnajax.moon
+      port: 443
     security:
       insecure: false
