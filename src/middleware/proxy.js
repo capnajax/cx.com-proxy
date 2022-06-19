@@ -25,7 +25,7 @@ let caches = c('caches').map(cache => new Cache(cache.name, cache.pattern));
 
 function request({method, path}) {
   const log = logger.getLogger(MODULE, request);
-  log.trace('Making request to "%s"', {method, path});
+  log.info('Making request to "%s"', {method, path});
 
   let docPromise = requestDocument({method, path});
 

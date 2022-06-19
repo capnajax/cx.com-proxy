@@ -6,6 +6,7 @@ import http from 'http';
 import https from 'https';
 import { promises as fs, readFileSync } from 'fs';
 import logger from 'capn-log';
+import path from 'path';
 import { WebSocket } from 'ws';
 import _ from 'lodash';
 
@@ -15,10 +16,20 @@ const c = global.config;
 
 const forwardableHeaders = c('proxy.forwardHeaders');
 
-const clientId = cryptoRandomString({length: 32, type: 'alphanumeric'})
 let socket;
-let caCert = _.has(global.argv, 'caCertFile')
-  ? readFileSync(global.argv.caCertFile).toString()
+
+const clientId = cryptoRandomString({length: 32, type: 'alphanumeric'})
+let caCerts = _.has(global.argv, 'caCertFile')
+  ? (() => {
+      const caCertParm = _.get(global.argv, 'caCertFile')
+      const cac = Array.isArray(caCertParm) ? caCertParm : [caCertParm];
+      let result = [];
+      for (let caci of cac) {
+        for (let cacij of caci.split(path.delimiter)) {
+          result.push(readFileSync(cacij));
+        }
+      }
+    })()
   : undefined;
 let sslCert = _.has(global.argv, 'sslCertFile')
   ? readFileSync(global.argv.sslCertFile).toString()
@@ -60,7 +71,7 @@ function uplinkClientOpts(opts) {
   log.trace('insecure: "%s"', insecure);
 
   let result = _.extend({
-    ca: caCert,
+    ca: caCerts,
     cert: sslCert,
     key: sslKey,
     rejectUnauthorized: !insecure,
@@ -300,7 +311,7 @@ async function openWs() {
   log.debug('creating WebSocket');
 
   const ws = new WebSocket(
-    `wss://${argv.frontSide}`, 
+    `wss://${argv.frontSide}/proxy`, 
     proxyOpts
     );
 
@@ -335,9 +346,10 @@ async function openWs() {
       log.error('Received unexpected binary message');
     }
 
+  });
 
-
-
+  ws.on('error', function(reason) {
+    log.error('Error in socket: %s', reason);
   });
 
   ws.on('open', function() {

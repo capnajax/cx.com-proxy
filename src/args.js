@@ -18,7 +18,7 @@ function doParse() {
       arg: ['--caCert'],
       env: 'CA_CERT',
       required: false,
-      type: 'string'
+      type: 'list'
     },
     { name: 'configEnv',
       arg: ['--env'],

@@ -12,7 +12,7 @@ default:
   debug:
     logging:
       level: info
-      showSensitive: false
+      showSensitive: true
       modules:
       - name: proxy/ws-client
         level: trace
@@ -20,7 +20,7 @@ default:
         # - name: backendClientOpts
         #   level: info
         - name: uplinkClientOpts
-          level: info
+          level: trace
   proxy:
     forwardHeaders:
     - content-type

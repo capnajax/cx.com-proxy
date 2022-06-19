@@ -1,7 +1,7 @@
 {
   "name": "cx.com-proxy",
   "version": "1.0.0",
-  "description": "",
+  "description": "Websocket-based proxy server",
   "main": "src/http-server.js",
   "type": "module",
   "scripts": {

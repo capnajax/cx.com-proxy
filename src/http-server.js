@@ -34,7 +34,7 @@ async function startup() {
         fs.readFile(argv[pem[0]])
           .then(buf => { serverArgs[pem[1]] = buf.toString();})
       );
-    }      
+    }
   }
 
   function onError(error) {
