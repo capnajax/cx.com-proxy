@@ -26,9 +26,10 @@ let caCerts = _.has(global.argv, 'caCertFile')
       let result = [];
       for (let caci of cac) {
         for (let cacij of caci.split(path.delimiter)) {
-          result.push(readFileSync(cacij));
+          result.push(readFileSync(cacij).toString());
         }
       }
+      return result;
     })()
   : undefined;
 let sslCert = _.has(global.argv, 'sslCertFile')
@@ -46,9 +47,9 @@ function backendClientOpts(opts) {
   const log = logger.getLogger(MODULE, 'backendClientOpts');
 
   let result = _.extend({
-    ca: caCert,
-    cert: sslCert,
-    key: sslKey,
+    // ca: caCerts,
+    // cert: sslCert,
+    // key: sslKey,
     host: c('backend.host'),
     port: c('backend.port'),
     timeout: 1000
@@ -71,10 +72,10 @@ function uplinkClientOpts(opts) {
   log.trace('insecure: "%s"', insecure);
 
   let result = _.extend({
-    ca: caCerts,
-    cert: sslCert,
-    key: sslKey,
-    rejectUnauthorized: !insecure,
+    // ca: caCerts,
+    // cert: sslCert,
+    // key: sslKey,
+    rejectUnauthorized: false, //!insecure,
     timeout: 1000
   }, opts);
 
@@ -137,13 +138,37 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
     }
   }
 
-  const backendRequest = http.request(clientOptions);
-  log.debug(' --> %s %s made backend request', method.toUpperCase(), path);
-  //backendRequest.setNoDelay(true);
-  //log.debug(' --> %s %s set nodelay', method.toUpperCase(), path);
+  const backendRequest = http.request(clientOptions, res => {
+    res.on('data', chunk => {
+      log.trace(' --> data--> %s %s got data %s', method.toUpperCase(), path, chunk);
+      writeUplink(chunk);
+    });
+  
+    res.on('end', () => {
+      log.debug(' --> end--> %s %s client response end', method.toUpperCase(), path);
+      writeUplink();
+      uplink && uplink.end();
+      log.debug(' --> end--> %s %s uplink complete', method.toUpperCase(), path);
+      uplink = null;
+    });
+  
+    res.on('error', reason => {
+      log.debug(' --> error--> %s %s ERROR: %s', method.toUpperCase(), path, reason);
+      uplink && uplink.destroy();
+      uplink = null;
+    });
+  });
+
+  log.trace('clientOptions: %s', clientOptions);
+  log.debug(' --> %s %s made backend request to %s%s', method.toUpperCase(),
+    path, '', path);
+  backendRequest.setNoDelay(true);
+  log.debug(' --> %s %s set nodelay', method.toUpperCase(), path);
 
   backendRequest.on('response', message => {
-    log.debug(' --> %s %s got response', method.toUpperCase(), path);
+    log.debug(' --> response--> %s %s got response', method.toUpperCase(), path);
+    log.trace(' --> response--> --> message %s', message);
+    log.trace(' --> response--> --> message.events %s', message._events);
 
     // build the request to the backend
     let headers = {};
@@ -151,7 +176,7 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
       let key = message.rawHeaders[i].toLowerCase();
       let value = message.rawHeaders[i+1];
 
-      log.trace(' --> --> header() %s: %s', forwardableHeaders.includes(key) ? 'included' : 'not included', key, value);
+      log.trace(' --> response--> header() %s: %s = %s', forwardableHeaders.includes(key) ? 'included' : 'not included', key, value);
 
       if (forwardableHeaders.includes(key)) {
         headers[key] = value;
@@ -173,32 +198,16 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
     });
 
     uplinkOpts.headers = headers;
-    log.trace('uplinkOpts.headers: %s', uplinkOpts.headers);
+    log.trace(' --> response--> uplinkOpts.headers: %s', uplinkOpts.headers);
+    log.trace(' --> response--> uplinkOpts: %s', uplinkOpts);
+
     uplink = https.request(uplinkOpts);
 
+    log.trace('http request made. Now we wait...');
   });
 
-  backendRequest.on('data', chunk => {
-    writeUplink(chunk);
-  });
-
-  backendRequest.on('end', () => {
-    log.debug(' --> %s %s client response end', method.toUpperCase(), path);
-    writeUplink();
-    uplink && uplink.end();
-    log.debug(' --> %s %s uplink complete', method.toUpperCase(), path);
-    uplink = null;
-  });
-
-  backendRequest.on('error', reason => {
-    log.debug(' --> %s %s ERROR: %s', method.toUpperCase(), path, reason);
-    uplink && uplink.destroy();
-    uplink = null;
-  });
-
-  backendRequest.end(() => {
-    log.debug(' --> %s %s end', method.toUpperCase(), path);
-  });
+  backendRequest.end();
+  log.trace('backend request sent: %s', backendRequest);
 }
 
 function httpGet(dataObj) {
@@ -214,14 +223,13 @@ function httpGet(dataObj) {
     { requestId: dataObj.requestId }
   );
 
+  // This area below replaced by the clientPutProxy above
+
   // for (let i of ['path', 'requestId']) {
   //   if (!_.has(dataObj, i)) {
   //     throw `\`get\` dataObj missing required value for "${i}"`;
   //   }
   // }
-
-  
-
 
 
   // // make HTTP client request
@@ -307,11 +315,14 @@ async function openWs() {
   log.debug('openWs called');
 
   const proxyOpts = uplinkClientOpts({});
+  const socketUrl = `wss://${argv.frontSide}/proxy`;
 
   log.debug('creating WebSocket');
+  log.trace(' --> openning socket to: %s', socketUrl);
+  log.trace(' --> proxyOpts: %s', proxyOpts);
 
   const ws = new WebSocket(
-    `wss://${argv.frontSide}/proxy`, 
+    socketUrl, 
     proxyOpts
     );
 

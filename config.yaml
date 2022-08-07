@@ -12,17 +12,13 @@ default:
   debug:
     logging:
       level: info
-      showSensitive: true
+      showSensitive: false
       modules:
       - name: proxy/ws-client
-        level: trace
-        methods:
-        # - name: backendClientOpts
-        #   level: info
-        - name: uplinkClientOpts
-          level: trace
+        level: info
   proxy:
     forwardHeaders:
+    - cache-control
     - content-type
     - content-length
     - location
@@ -44,7 +40,5 @@ environment:
 - name: prod
   config:
     backend:
-      host: prod-direct.capnajax.moon
-      port: 443
-    security:
-      insecure: false
+      host: direct.capnajax.moon
+      port: 80
