@@ -19,15 +19,17 @@ router.put('/', (req, res) => {
   const log = logger.getLogger(MODULE, 'PUT', '/');
 
   let chunks = [];
+  let chunkSizes = [];
 
   // pull data by hand so expressjs doesn't try to parse it.
   req.on('data', chunk => {
-    log.trace('GOT CHUNK: %s', chunk);
+    log.trace('GOT CHUNK: (%s)', Buffer.isBuffer(chunk) ? 'Buffer' : typeof(chunk));
     chunks.push(chunk);
+    chunkSizes.push( chunk.length );
   });
 
   req.on('end', () => {
-    const body = chunks.join('');
+    const body = Buffer.concat(chunks);
 
     let requestId = req.get('x-capnajax-request-id');
     log.debug('called. RequestId: "%s"', requestId);
@@ -38,9 +40,9 @@ router.put('/', (req, res) => {
       }
     }
   
-    log.trace('req %s', req);
     log.trace('headers: %s', headers);
-    log.trace('body: %s', body);
+    log.trace('length: %s', _.sum(chunkSizes));
+    log.trace('body.length: %s', body.length);
   
     if (_.has(requestsOutstanding, requestId)) {
       requestsOutstanding[requestId](headers, body);

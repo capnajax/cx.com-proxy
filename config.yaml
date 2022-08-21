@@ -16,6 +16,12 @@ default:
       modules:
       - name: proxy/ws-client
         level: info
+        methods:
+        - name: clientPutProxy
+          level: trace
+      - name: proxy/receiver
+        level: trace
+
   proxy:
     forwardHeaders:
     - cache-control
@@ -42,3 +48,5 @@ environment:
     backend:
       host: direct.capnajax.moon
       port: 80
+    security:
+      insecure: false

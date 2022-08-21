@@ -52,7 +52,7 @@ function backendClientOpts(opts) {
     // key: sslKey,
     host: c('backend.host'),
     port: c('backend.port'),
-    timeout: 1000
+    timeout: 2000
   }, opts);
 
   log.trace('result: %s', result);
@@ -76,7 +76,7 @@ function uplinkClientOpts(opts) {
     // cert: sslCert,
     // key: sslKey,
     rejectUnauthorized: false, //!insecure,
-    timeout: 1000
+    timeout: 2000
   }, opts);
 
   log.trace('result: %s', result);
@@ -126,9 +126,9 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
   let writeUplink = (chunk) => {
     if (chunk) {
       log.debug(' --> %s %s queueing chunk', method.toUpperCase(), path);
-      chunks && chunks.push(chunk);
+      chunks.push(chunk);
     }
-    if (uplink && chunks) {
+    if (uplink) {
       while(chunks.length) {
         log.debug(' --> %s %s writing chunk', method.toUpperCase(), path);
         let writeChunk = chunks.shift();
@@ -140,7 +140,7 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
 
   const backendRequest = http.request(clientOptions, res => {
     res.on('data', chunk => {
-      log.trace(' --> data--> %s %s got data %s', method.toUpperCase(), path, chunk);
+      log.trace(' --> data--> %s %s got data (%s) %s', method.toUpperCase(), path, Buffer.isBuffer(chunk) ? 'Buffer' : typeof(chunk), chunk);
       writeUplink(chunk);
     });
   
