@@ -14,13 +14,17 @@ default:
       level: info
       showSensitive: false
       modules:
-      - name: proxy/ws-client
+      - name: proxy/server
         level: info
         methods:
-        - name: clientPutProxy
+        - name: dequeConnection
           level: trace
-      - name: proxy/receiver
-        level: trace
+        - name: queueConnection
+          level: debug
+        - name: closeConnection
+          level: debug
+        - name: requestDocument
+          level: trace
 
   proxy:
     forwardHeaders:

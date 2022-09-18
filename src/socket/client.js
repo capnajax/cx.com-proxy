@@ -14,6 +14,8 @@ const MODULE = 'proxy/ws-client';
 const PROTOCOL = 'cxproxy';
 const c = global.config;
 
+const TIMEOUT = 5000;
+
 const forwardableHeaders = c('proxy.forwardHeaders');
 
 let socket;
@@ -52,7 +54,7 @@ function backendClientOpts(opts) {
     // key: sslKey,
     host: c('backend.host'),
     port: c('backend.port'),
-    timeout: 2000
+    timeout: TIMEOUT
   }, opts);
 
   log.trace('result: %s', result);
@@ -76,7 +78,7 @@ function uplinkClientOpts(opts) {
     // cert: sslCert,
     // key: sslKey,
     rejectUnauthorized: false, //!insecure,
-    timeout: 2000
+    timeout: TIMEOUT
   }, opts);
 
   log.trace('result: %s', result);
@@ -101,7 +103,7 @@ function uplinkClientOpts(opts) {
  */
 function clientPutProxy(method, path, frontendOptions, backendOptions) {
   const log = logger.getLogger(MODULE, clientPutProxy);
-  log.debug('Making backend %s request to %s', method.toUpperCase(), path);
+  log.info('Making backend %s request to %s', method.toUpperCase(), path);
 
   backendOptions || (backendOptions = {});
   let clientOptions = backendClientOpts(
@@ -222,67 +224,6 @@ function httpGet(dataObj) {
     dataObj.path,
     { requestId: dataObj.requestId }
   );
-
-  // This area below replaced by the clientPutProxy above
-
-  // for (let i of ['path', 'requestId']) {
-  //   if (!_.has(dataObj, i)) {
-  //     throw `\`get\` dataObj missing required value for "${i}"`;
-  //   }
-  // }
-
-
-  // // make HTTP client request
-  // axios.get(url)
-  //   .then(response => {
-
-  //     log.trace('response: %s', response);
-  //     log.trace('response.headers: %s', response.headers);
-
-
-
-  //     // TODO response.data isn't always a stream. axios wants to parse some
-  //     // content types. Ditch axios and use a raw http client
-
-
-  //     let dataBuffer = Buffer.from(response.data);
-  //     // post result to server
-  //     let forwardHeaders = {
-  //       'x-capnajax-status': response.status,
-  //       'x-capnajax-statusText': response.statusText,
-  //       'x-capnajax-content-type': response.headers['content-type'],
-  //       'content-type': 'application/octet-stream',
-  //       'content-length': dataBuffer.length,
-  //       'x-capnajax-request-id': dataObj.requestId,
-  //       'x-capnajax-path': dataObj.path
-  //     };
-
-  //     log.trace('forwardHeaders: %s', forwardHeaders);
-
-  //     let putOptions = proxyClientOpts({
-  //       method: 'PUT',
-  //       headers: forwardHeaders,
-  //       url: `https://${argv.frontSide}/_content`
-  //     });
-
-  //     let uplink = axiosUplink();
-
-  //     log.trace('Got response, POSTing with headers %s', putOptions.headers);
-  //     putOptions.data = dataBuffer;
-
-  //     uplink(putOptions)
-  //       .then(response => {
-  //         log.trace('POSTed.');
-  //         log.trace('Status %s', response.status);
-  //         if (response.status >= 400) {
-  //           console.error('Got error %s responding to GET (%s) %s',
-  //             response.status, dataObj.requestId, dataObj.path);
-  //         }
-  //       })
-  //       .catch(e => {
-  //         log.error('failed upload response: %s', e);
-  //       });
-  //   });
 }
 
 let pingTimeout;

@@ -83,7 +83,7 @@ function proxy(req, res, next) {
     cachedDocument = caches[i].get(verb, path, ims);
   }
   
-  log.debug(' --> cache %s', cachedDocument instanceof Symbol ? cachedDocument : 'document found');
+  log.debug(' --> cachedDocument: %s', cachedDocument);
 
   if (
     cachedDocument === wontCache ||
