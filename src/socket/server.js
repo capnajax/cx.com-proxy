@@ -125,7 +125,8 @@ function requestDocument({method, path}) {
       let start = () => {
         let requestId = cryptoRandomString({length: 32, type: 'alphanumeric'});
         let message = JSON.stringify({method, path, requestId});
-        log.trace('sending message %s', message);
+        log.debug('sending message to path "%s %s"', method, path);
+        log.trace(' --> message: %s', message);
         activeClient.send(message);
         log.trace('setting timeout')
         let timeout = setTimeout(() => {

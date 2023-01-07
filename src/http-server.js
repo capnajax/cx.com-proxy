@@ -23,17 +23,24 @@ async function startup() {
   let serverArgs = {};
 
   // get certificates
-  for (let pem of [
-    ['caCertFile', 'ca'],
-    ['sslCertFile', 'cert'],
-    ['sslKeyFile', 'key']]) {
+  if (global.argv.secure) {
+    for (let pem of [
+      ['caCertFile', 'ca'],
+      ['sslCertFile', 'cert'],
+      ['sslKeyFile', 'key']]) {
 
-    if (argv[pem[0]]) {
-      createServer = https.createServer;
-      beforeReadyPromises.push(
-        fs.readFile(argv[pem[0]])
-          .then(buf => { serverArgs[pem[1]] = buf.toString();})
-      );
+      if (argv[pem[0]]) {
+        createServer = https.createServer;
+        let certFiles = argv[pem[0]];
+        for (let f of Array.isArray(certFiles) ? certFiles : [certFiles]) {
+          log.info('Reading %s file "%s"', pem[1] === 'ca' ? 'ca-cert' : pem[1], f);
+          beforeReadyPromises.push(
+            fs.readFile(f)
+              // FIXME can only handle one ca cert
+              .then(buf => { serverArgs[pem[1]] = buf.toString();})
+          );
+        }
+      }
     }
   }
 

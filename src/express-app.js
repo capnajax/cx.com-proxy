@@ -1,6 +1,7 @@
 'use strict';
 
 import express from 'express';
+import healthCheck from './middleware/health-check.js';
 import morganLogger from 'morgan';
 import proxy from './middleware/proxy.js';
 import receiver from './middleware/receiver.js';
@@ -16,6 +17,7 @@ app.use(bodyParser.raw({limit: '10mb'}));
 app.use(morganLogger('dev'));
 
 app.use('/_content', receiver);
+app.use('/healthz', healthCheck);
 app.use(new RegExp('^/([^_].*)?$'), proxy);
 
 app.use((req, res, next) => {

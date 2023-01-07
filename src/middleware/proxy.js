@@ -23,18 +23,57 @@ const passThroughHeaders = {
 
 let caches = c('caches').map(cache => new Cache(cache.name, cache.pattern));
 
+const specialPaths = {
+  '/content/last-update': {
+    get: function(headers, body) {
+      let log = logger.getLogger(MODULE, 'special:/content/last-update');
+      log.trace('headers[\'content-type\'] == %s', headers['content-type']);
+      if (headers['x-capnajax-status'] == 200) {
+        let bodyObj = JSON.parse(body);
+        let lastUpdate = bodyObj['last-update'];
+
+        setTimeout(() => {
+          log.trace('checking caches for ims:');
+          for (let cache of caches) {
+            log.trace(
+              '--> lastUpdate: %s, cache.ims: %s', lastUpdate, cache.ims);
+            cache.clear();
+          }            
+        }, 10);
+
+
+      }
+    }
+  }
+}
+
 function request({method, path}) {
   const log = logger.getLogger(MODULE, request);
   log.info('Making request to "%s"', {method, path});
 
+  // test cache, request doc, and resolve with doc
   let docPromise = requestDocument({method, path});
 
+  // test for special handling
+  let special = specialPaths[path];
+  special && (special = special[method]);
+  if (special) {
+    docPromise.then(doc => {
 
+      log.debug('%s %s is a special path', method, path);
+      log.trace('doc: %s', doc);
+      log.trace('doc.headers: %s', doc.headers);
+      log.trace('doc.doc: %s', doc.doc.toString());
+      // TODO use the doc to call the special function
 
+      special(doc.headers, doc.doc.toString());
 
-  // TODO
-
-
+    }).catch(e => {
+      log.error('request error: %s', e);
+    });
+  } else {
+    log.trace('%s %s is NOT a special path', method, path);
+  }
 
   return docPromise;
 

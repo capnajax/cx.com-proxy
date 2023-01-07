@@ -116,7 +116,8 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
 
   const uplinkOpts = uplinkClientOpts({
     method: 'PUT',
-    hostname: argv.frontSide,
+    hostname: argv.frontSide.replace(/:.*/, ''),
+    port: argv.frontSide.replace(/.*:/, ''),
     path: '/_content'
   });
 
@@ -125,7 +126,7 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
   // stores chunks until ready to send them.
   let chunks = [];
 
-  let writeUplink = (chunk) => {
+  let writeUplink = async (chunk) => {
     if (chunk) {
       log.debug(' --> %s %s queueing chunk', method.toUpperCase(), path);
       chunks.push(chunk);
@@ -135,7 +136,7 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
         log.debug(' --> %s %s writing chunk', method.toUpperCase(), path);
         let writeChunk = chunks.shift();
         log.trace('Chunk: %s', writeChunk);
-        uplink.write(writeChunk);
+        await uplink.write(writeChunk);
       }
     }
   }
@@ -146,10 +147,10 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
       writeUplink(chunk);
     });
   
-    res.on('end', () => {
+    res.on('end', async () => {
       log.debug(' --> end--> %s %s client response end', method.toUpperCase(), path);
-      writeUplink();
-      uplink && uplink.end();
+      await writeUplink();
+      uplink && await uplink.end();
       log.debug(' --> end--> %s %s uplink complete', method.toUpperCase(), path);
       uplink = null;
     });
@@ -203,7 +204,7 @@ function clientPutProxy(method, path, frontendOptions, backendOptions) {
     log.trace(' --> response--> uplinkOpts.headers: %s', uplinkOpts.headers);
     log.trace(' --> response--> uplinkOpts: %s', uplinkOpts);
 
-    uplink = https.request(uplinkOpts);
+    uplink = (global.argv.secure ? https : http).request(uplinkOpts);
 
     log.trace('http request made. Now we wait...');
   });
@@ -256,7 +257,8 @@ async function openWs() {
   log.debug('openWs called');
 
   const proxyOpts = uplinkClientOpts({});
-  const socketUrl = `wss://${argv.frontSide}/proxy`;
+  const wsProto = global.argv.secure ? 'wss' : 'ws';
+  const socketUrl = `${wsProto}://${argv.frontSide}/proxy`;
 
   log.debug('creating WebSocket');
   log.trace(' --> openning socket to: %s', socketUrl);

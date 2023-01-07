@@ -33,6 +33,12 @@ router.put('/', (req, res) => {
 
     let requestId = req.get('x-capnajax-request-id');
     log.debug('called. RequestId: "%s"', requestId);
+    if (!requestId) {
+      log.error('called with no requestId');
+      res.sendStatus(400);
+      return;
+    }
+
     let headers = {};
     for (let h of passThroughHeaders) {
       if (req.get(h)) {
@@ -46,10 +52,12 @@ router.put('/', (req, res) => {
   
     if (_.has(requestsOutstanding, requestId)) {
       requestsOutstanding[requestId](headers, body);
+    } else {
+      log.error('called with unknown requestId "%s"', requestId);
+      res.sendStatus(401);
     }
   
     res.sendStatus(204);
-  
   });
 
 });

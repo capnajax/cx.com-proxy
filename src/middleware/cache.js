@@ -1,6 +1,9 @@
 'use strict';
 
 import _ from "lodash";
+import logger from 'capn-log';
+
+const MODULE = 'proxy/cache';
 
 /**
  * Used to indicate that this cache would normally cache that path key but
@@ -44,14 +47,26 @@ class Document {
   }
 
   getHeaders(name) {
+    const log = logger.getLogger(MODULE, 'Document.getHeaders');
+    log.trace('this.headers: %s', this.headers);
     let result = this.headers.filter(
-      header => name === header.replace(/:.*/, ''));
+      header => {
+        let result = (name === header.replace(/:.*/, ''));
+        log.trace(' --> header %s, result %s', header, result);
+        return result;
+      });
     return result;
   }
 
   getHeaderValues(name) {
+    const log = logger.getLogger(MODULE, 'Document.getHeaderValues');
+    log.trace('this.headers: %s', this.headers);
     let result = this.getHeaders(name).map(
-      header => header.replace(/[^:]*:/, ''));
+      header => {
+        let result = header.replace(/[^:]*:/, '');
+        log.trace(' --> header %s, result %s', header, result);
+        return result;
+      });
     return result;
   }
 }
@@ -75,6 +90,8 @@ class Cache {
   }
 
   clear() {
+    const log = logger.getLogger(MODULE, 'Cache.clear');
+    log.info('Clearing cache');
     this.ims = Date.now();
     this.documents = {};
   }
@@ -111,6 +128,9 @@ class Cache {
 
   set(verb, path, document) {
     let key = this.#key(verb, path);
+    // if (document.getHeaders('cache-control')) {
+    //   return wontCache;
+    // }
     if (key !== wontCache) {
       this.documents[key] = document;
       return cached;
@@ -127,5 +147,3 @@ export {
   notCached,
   wontCache
 };
-
-

@@ -43,6 +43,12 @@ function doParse() {
       type: 'integer',
       default: 3000
     },
+    { name: 'secure',
+      arg: ['--secure'],
+      env: 'SECURE',
+      required: true,
+      type: 'boolean'
+    },
     { name: 'sslCertFile',
       arg: ['--sslCert'],
       env: 'SSL_CERT',
